@@ -1,0 +1,69 @@
+Source				   = \
+						 SingPrec.f90 \
+						 NWTC_Base.f90 \
+						 SysGnuLinux.f90 \
+						 NWTC_Library_Types.f90 \
+						 NWTC_IO.f90 \
+						 NWTC_Num.f90 \
+						 ModMesh_Types.f90 \
+						 ModMesh.f90 \
+						 ModMesh_Mapping.f90 \
+						 NWTC_Library.f90 \
+
+Empty                  =
+Space                  = $(Empty) $(Empty)
+temproot               = $(subst /Source,$(Space),$(CURDIR))
+DEV_ROOT               = $(word 1,$(temproot))
+
+include $(DEV_ROOT)/Makefile
+
+Package        		   = $(subst $(DEV_ROOT)/Source/,,$(CURDIR))
+PackageSourceDir 	   = $(DEV_ROOT)/Source/$(Package)
+PackageTargetDir       = $(DEV_ROOT)/Object/$(OBJMID)/$(Package)
+ModDir                 = $(DEV_ROOT)/Object/$(OBJMID)/Mods
+
+ifeq ($(OS),linux)
+Makedir                = @mkdir -p
+COptions			   = `pkg-config --cflags --libs gtk+-3.0 gmodule-2.0` $(CEXTRAOPTION)
+else
+Makedir                = @echo
+COptions			   = $(COPTION) $(CEXTRAOPTION)
+FortranOptions         = -cpp -ffree-line-length-none -O2
+endif
+
+FSourceFiles           = $(Source:%= $(PackageSourceDir)/%)
+FObjectFiles           = $(Source:%.f= $(PackageTargetDir)/%.o) \
+							$(Source:%.f90= $(PackageTargetDir)/%.o) \
+							$(Source:%.f95= $(PackageTargetDir)/%.o)
+
+$(ModDir):
+	$(Makedir) $@
+
+$(PackageTargetDir):
+	$(Makedir) $@
+
+Print                  = echo
+FortranCompiler        = gfortran
+
+$(PackageTargetDir)/%.o : $(PackageSourceDir)/%.f95
+	$(Print) $@
+	$(FortranCompiler) $(FortranOptions) -J$(ModDir) -c $< -o $@
+
+$(PackageTargetDir)/%.o : $(PackageSourceDir)/%.f90
+	$(Print) $@
+	$(FortranCompiler) $(FortranOptions) -J$(ModDir) -c $< -o $@
+
+$(PackageTargetDir)/%.o : $(PackageSourceDir)/%.f
+	$(Print) $@
+	$(FortranCompiler) $(FortranOptions) -J$(ModDir) -c $< -o $@
+
+package_build : \
+	$(ModDir) \
+	$(PackageTargetDir) \
+	$(FObjectFiles)
+
+	echo $(FSourceFiles)
+	echo $(FObjectFiles)
+
+package_clean : 
+	@rm -fr $(PackageTargetDir)/*
